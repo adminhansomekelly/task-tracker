@@ -30,6 +30,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='112' fill='%231D9E75'/><rect x='140' y='156' width='232' height='28' rx='14' fill='white'/><rect x='140' y='242' width='232' height='28' rx='14' fill='white'/><rect x='140' y='328' width='160' height='28' rx='14' fill='white'/><circle cx='108' cy='170' r='18' fill='white'/><circle cx='108' cy='256' r='18' fill='white'/><circle cx='108' cy='342' r='18' fill='white'/></svg>">
 
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -783,9 +784,135 @@
     transition: all 0.15s;
   }
   .review-btn:hover { background: var(--surface2); }
+
+  /* ── AUTH SCREEN ── */
+  #auth-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1.25rem;
+  }
+  .auth-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%; max-width: 360px;
+  }
+  .auth-logo {
+    width: 44px; height: 44px;
+    background: var(--green);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1.25rem;
+  }
+  .auth-logo svg { width: 24px; height: 24px; fill: white; }
+  .auth-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .auth-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
+  .auth-field { margin-bottom: 1rem; }
+  .auth-field label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+  .auth-field input {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    background: var(--bg); color: var(--text);
+    outline: none; transition: border 0.15s;
+  }
+  .auth-field input:focus { border-color: var(--green); }
+  .auth-btn {
+    width: 100%; padding: 11px;
+    background: var(--green); color: white;
+    border: none; border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s; margin-top: 0.25rem;
+  }
+  .auth-btn:hover { opacity: 0.88; }
+  .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .auth-switch { text-align: center; margin-top: 1.25rem; font-size: 13px; color: var(--text2); }
+  .auth-switch button { background: none; border: none; color: var(--green); font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; }
+  .auth-msg { font-size: 12px; margin-top: 10px; text-align: center; min-height: 16px; }
+  .auth-msg.err { color: var(--red); }
+  .auth-msg.ok { color: var(--green); }
+
+  /* sync indicator */
+  #sync-status {
+    position: fixed; bottom: calc(1rem + var(--safe-bottom)); right: 1rem;
+    font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 5px;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 4px 10px; border-radius: 99px; z-index: 100;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  #sync-status.show { opacity: 1; }
+  #sync-status .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  #sync-status.syncing .sync-dot { background: var(--amber); animation: pulse 1s infinite; }
+  #sync-status.err .sync-dot { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* user menu */
+  #user-menu-btn {
+    position: fixed; top: calc(1rem + var(--safe-top)); right: 1rem;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--green); color: white;
+    border: none; cursor: pointer; font-size: 13px; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; z-index: 200;
+    display: none; align-items: center; justify-content: center;
+  }
+  #user-menu-btn.visible { display: flex; }
+  #user-dropdown {
+    position: fixed; top: calc(3rem + var(--safe-top)); right: 1rem;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 0.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 201; display: none; min-width: 180px;
+  }
+  #user-dropdown.open { display: block; }
+  .dropdown-email { font-size: 11px; color: var(--text3); padding: 6px 10px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .dropdown-item { display: block; width: 100%; text-align: left; padding: 8px 10px; background: none; border: none; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); cursor: pointer; }
+  .dropdown-item:hover { background: var(--surface2); }
+  .dropdown-item.danger { color: var(--red); }
 </style>
 </head>
 <body>
+
+<!-- Auth Screen -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    </div>
+    <div class="auth-title" id="auth-title">Welcome back</div>
+    <div class="auth-sub" id="auth-sub">Sign in to sync your tasks across devices</div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div class="auth-field" id="auth-name-field" style="display:none;">
+      <label>Your name (optional)</label>
+      <input type="text" id="auth-name" placeholder="e.g. Hansome">
+    </div>
+    <button class="auth-btn" id="auth-submit">Sign in</button>
+    <div class="auth-msg" id="auth-msg"></div>
+    <div class="auth-switch">
+      <span id="auth-switch-text">Don't have an account?</span>
+      <button id="auth-switch-btn" onclick="toggleAuthMode()">Sign up</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Menu -->
+<button id="user-menu-btn" onclick="toggleUserMenu()">H</button>
+<div id="user-dropdown">
+  <div class="dropdown-email" id="dropdown-email"></div>
+  <button class="dropdown-item" onclick="syncAll()">↻ Sync now</button>
+  <button class="dropdown-item danger" onclick="signOut()">Sign out</button>
+</div>
+
+<!-- Sync Status -->
+<div id="sync-status"><div class="sync-dot"></div><span id="sync-text">Saved</span></div>
+
 <div class="app">
 
   <!-- Top Bar -->
@@ -1035,6 +1162,144 @@
 </div>
 
 <script>
+// ── SUPABASE SETUP ──
+const SUPA_URL = 'https://klgvmfntngkhhcnbameq.supabase.co';
+const SUPA_KEY = 'sb_publishable_ro41a9MLj25O6rnl4XiPBw_coF33mAi';
+const { createClient } = supabase;
+const sb = createClient(SUPA_URL, SUPA_KEY);
+
+let currentUser = null;
+let syncTimeout = null;
+
+// ── AUTH FUNCTIONS ──
+let authMode = 'login';
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  document.getElementById('auth-title').textContent = authMode === 'login' ? 'Welcome back' : 'Create account';
+  document.getElementById('auth-sub').textContent = authMode === 'login' ? 'Sign in to sync your tasks across devices' : 'Set up your account to sync everywhere';
+  document.getElementById('auth-submit').textContent = authMode === 'login' ? 'Sign in' : 'Create account';
+  document.getElementById('auth-switch-text').textContent = authMode === 'login' ? "Don't have an account?" : 'Already have an account?';
+  document.getElementById('auth-switch-btn').textContent = authMode === 'login' ? 'Sign up' : 'Sign in';
+  document.getElementById('auth-name-field').style.display = authMode === 'signup' ? 'block' : 'none';
+  document.getElementById('auth-msg').textContent = '';
+}
+
+document.getElementById('auth-submit').onclick = async function() {
+  const email = document.getElementById('auth-email').value.trim();
+  const pass = document.getElementById('auth-password').value;
+  const msg = document.getElementById('auth-msg');
+  const btn = document.getElementById('auth-submit');
+  if (!email || !pass) { msg.className='auth-msg err'; msg.textContent='Please enter email and password.'; return; }
+  btn.disabled = true;
+  msg.className = 'auth-msg'; msg.textContent = authMode === 'login' ? 'Signing in…' : 'Creating account…';
+  if (authMode === 'login') {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { msg.className='auth-msg err'; msg.textContent=error.message; btn.disabled=false; return; }
+    onSignedIn(data.user);
+  } else {
+    const { data, error } = await sb.auth.signUp({ email, password: pass });
+    if (error) { msg.className='auth-msg err'; msg.textContent=error.message; btn.disabled=false; return; }
+    if (data.user && !data.user.identities?.length) {
+      msg.className='auth-msg err'; msg.textContent='Email already registered. Try signing in.'; btn.disabled=false; return;
+    }
+    msg.className='auth-msg ok'; msg.textContent='Account created! Signing you in…';
+    const { data: d2, error: e2 } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (e2) { msg.className='auth-msg err'; msg.textContent=e2.message; btn.disabled=false; return; }
+    onSignedIn(d2.user);
+  }
+};
+
+// allow Enter key on password field
+document.getElementById('auth-password').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('auth-submit').click();
+});
+
+async function onSignedIn(user) {
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  const initials = (user.email || 'U')[0].toUpperCase();
+  document.getElementById('user-menu-btn').textContent = initials;
+  document.getElementById('user-menu-btn').classList.add('visible');
+  document.getElementById('dropdown-email').textContent = user.email;
+  await syncAll();
+  render();
+}
+
+function toggleUserMenu() {
+  document.getElementById('user-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#user-menu-btn') && !e.target.closest('#user-dropdown')) {
+    document.getElementById('user-dropdown').classList.remove('open');
+  }
+});
+
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  document.getElementById('user-menu-btn').classList.remove('visible');
+  document.getElementById('user-dropdown').classList.remove('open');
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('auth-submit').disabled = false;
+  document.getElementById('auth-msg').textContent = '';
+}
+
+// Check if already logged in on load
+sb.auth.getSession().then(({ data }) => {
+  if (data.session?.user) {
+    onSignedIn(data.session.user);
+  }
+});
+
+// ── SYNC STATUS ──
+function showSync(state, text) {
+  const el = document.getElementById('sync-status');
+  const dot = el.querySelector('.sync-dot');
+  el.className = 'sync-status show ' + state;
+  document.getElementById('sync-text').textContent = text;
+  el.style.opacity = '1';
+  if (state !== 'syncing') {
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2000);
+  }
+}
+
+// ── SUPABASE READ/WRITE HELPERS ──
+async function sbGet(table, keyCol, keyVal) {
+  if (!currentUser) return null;
+  const { data } = await sb.from(table).select('*').eq('user_id', currentUser.id).eq(keyCol, keyVal).single();
+  return data;
+}
+async function sbUpsert(table, keyCol, keyVal, dataCol, value) {
+  if (!currentUser) return;
+  showSync('syncing', 'Saving…');
+  const { error } = await sb.from(table).upsert(
+    { user_id: currentUser.id, [keyCol]: keyVal, [dataCol]: value, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,' + keyCol }
+  );
+  if (error) { showSync('err', 'Sync error'); console.error(error); }
+  else showSync('', 'Saved');
+}
+
+// ── SYNC ALL (pull from Supabase into localStorage on login) ──
+async function syncAll() {
+  if (!currentUser) return;
+  showSync('syncing', 'Syncing…');
+  try {
+    const [daily, weekly, monthly, quarterly] = await Promise.all([
+      sb.from('daily_tasks').select('*').eq('user_id', currentUser.id),
+      sb.from('weekly_tasks').select('*').eq('user_id', currentUser.id),
+      sb.from('monthly_goals').select('*').eq('user_id', currentUser.id),
+      sb.from('quarterly_goals').select('*').eq('user_id', currentUser.id),
+    ]);
+    (daily.data || []).forEach(r => { try { localStorage.setItem(r.date_key, JSON.stringify(r.tasks)); } catch(e){} });
+    (weekly.data || []).forEach(r => { try { localStorage.setItem(r.week_key, JSON.stringify(r.tasks)); } catch(e){} });
+    (monthly.data || []).forEach(r => { try { localStorage.setItem(r.month_key, JSON.stringify(r.goals)); } catch(e){} });
+    (quarterly.data || []).forEach(r => { try { localStorage.setItem(r.quarter_key, JSON.stringify(r.goals)); } catch(e){} });
+    showSync('', 'Synced');
+  } catch(e) { showSync('err', 'Sync failed'); }
+}
+
 const DAYS_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1082,6 +1347,7 @@ function getWeeklyTasks(d) {
 }
 function saveWeeklyTasks(d, tasks) {
   try { localStorage.setItem(weekKey(d), JSON.stringify(tasks)); } catch(e) {}
+  sbUpsert('weekly_tasks', 'week_key', weekKey(d), 'tasks', tasks);
 }
 
 function getDailyTasks(d) {
@@ -1093,6 +1359,7 @@ function getDailyTasks(d) {
 }
 function saveDailyTasks(d, tasks) {
   try { localStorage.setItem(dateKey(d), JSON.stringify(tasks)); } catch(e) {}
+  sbUpsert('daily_tasks', 'date_key', dateKey(d), 'tasks', tasks);
 }
 function getMonthlyGoals(d) {
   try {
@@ -1106,6 +1373,7 @@ function getMonthlyGoals(d) {
 }
 function saveMonthlyGoals(d, goals) {
   try { localStorage.setItem(monthKey(d), JSON.stringify(goals)); } catch(e) {}
+  sbUpsert('monthly_goals', 'month_key', monthKey(d), 'goals', goals);
 }
 
 function getQuarter(d) {
@@ -1134,6 +1402,7 @@ function getQuarterlyGoals(d) {
 }
 function saveQuarterlyGoals(d, goals) {
   try { localStorage.setItem(quarterKey(d), JSON.stringify(goals)); } catch(e) {}
+  sbUpsert('quarterly_goals', 'quarter_key', quarterKey(d), 'goals', goals);
 }
 
 function getGreeting() {
@@ -2033,4 +2302,10 @@ if (isIOS && !isStandalone && !dismissed) {
     '<button onclick="this.parentElement.remove();localStorage.setItem(\'install-banner-dismissed\',\'1\')" ',
       'style="background:rgba(255,255,255,0.2);border:none;color:white;font-size:18px;',
       'width:30px;height:30px;border-radius:50%;cursor:pointer;flex-shrink:0;',
-      'display:flex;align-items:center;justify-content:center
+      'display:flex;align-items:center;justify-content:center;">&#x2715;</button>'
+  ].join('');
+  document.body.appendChild(banner);
+}
+</script>
+</body>
+</html>
