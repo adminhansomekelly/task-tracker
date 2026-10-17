@@ -201,12 +201,12 @@
   /* ── MAIN GRID ── */
   .main-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
     gap: 16px;
     align-items: start;
   }
 
-  @media (max-width: 860px) {
+  @media (max-width: 1024px) {
     .main-grid { grid-template-columns: 1fr 1fr; }
   }
 
@@ -852,6 +852,25 @@
       <div class="goal-list" id="monthly-goals"></div>
     </div>
 
+    <!-- Quarterly Panel -->
+    <div class="panel">
+      <div class="panel-head">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+            <button class="nav-btn" onclick="changeQuarter(-1)" title="Previous quarter" style="width:22px;height:22px;font-size:12px;">‹</button>
+            <div class="panel-title" id="quarter-panel-title">Q2 priorities</div>
+            <button class="nav-btn" onclick="changeQuarter(1)" title="Next quarter" style="width:22px;height:22px;font-size:12px;">›</button>
+          </div>
+          <div class="panel-sub" id="quarter-panel-sub">Top goals this quarter</div>
+        </div>
+        <span class="count-badge" id="quarterly-badge">0 / 7</span>
+      </div>
+      <div class="prog-wrap">
+        <div class="prog-bar" id="quarterly-prog" style="width:0%"></div>
+      </div>
+      <div class="goal-list" id="quarterly-goals"></div>
+    </div>
+
   </div>
 
   <!-- Month Mini-Calendar -->
@@ -879,6 +898,7 @@
       <button class="stats-tab active" id="tab-daily" onclick="switchTab('daily')">Daily</button>
       <button class="stats-tab" id="tab-weekly" onclick="switchTab('weekly')">Weekly</button>
       <button class="stats-tab" id="tab-monthly" onclick="switchTab('monthly')">Monthly</button>
+      <button class="stats-tab" id="tab-quarterly" onclick="switchTab('quarterly')">Quarterly</button>
     </div>
 
     <!-- Daily Stats -->
@@ -965,6 +985,34 @@
       </div>
     </div>
 
+    <!-- Quarterly Stats -->
+    <div id="stats-quarterly" style="display:none;">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value highlight" id="stat-perfect-quarters">0</div>
+          <div class="stat-label">Perfect quarters</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-quarter-goals-done">0</div>
+          <div class="stat-label">Goals completed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-quarter-goals-total">0</div>
+          <div class="stat-label">Goals set</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-quarter-rate">0%</div>
+          <div class="stat-label">Goals hit rate</div>
+        </div>
+      </div>
+      <div class="streak-bar" id="quarter-streak-bar"></div>
+      <div class="streak-legend">
+        <div class="streak-legend-item"><div class="s-dot" style="background:var(--green)"></div> All 7 done</div>
+        <div class="streak-legend-item"><div class="s-dot" style="background:var(--amber-bg);border:1px solid var(--amber)"></div> Partial</div>
+        <div class="streak-legend-item"><div class="s-dot" style="background:var(--surface2);border:1px solid var(--border)"></div> No goals set</div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Month Review Modal -->
@@ -995,6 +1043,7 @@ const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct
 const TODAY = new Date();
 TODAY.setHours(0,0,0,0);
 let currentDate = new Date(TODAY);
+let currentQuarterDate = new Date(TODAY); // tracks which quarter is shown in the quarterly panel
 
 function dateKey(d) {
   return `tk-d-${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -1059,6 +1108,34 @@ function saveMonthlyGoals(d, goals) {
   try { localStorage.setItem(monthKey(d), JSON.stringify(goals)); } catch(e) {}
 }
 
+function getQuarter(d) {
+  return Math.floor(d.getMonth() / 3) + 1;
+}
+function quarterKey(d) {
+  return 'tk-q-' + d.getFullYear() + '-Q' + getQuarter(d);
+}
+function getQuarterLabel(d) {
+  return 'Q' + getQuarter(d) + ' ' + d.getFullYear();
+}
+function getQuarterMonths(d) {
+  var q = getQuarter(d);
+  var startMonth = (q - 1) * 3;
+  var s = new Date(d.getFullYear(), startMonth, 1);
+  var e = new Date(d.getFullYear(), startMonth + 2, 1);
+  return MONTHS_SHORT[s.getMonth()] + ' – ' + MONTHS_SHORT[e.getMonth()];
+}
+function getQuarterlyGoals(d) {
+  try {
+    var raw = localStorage.getItem(quarterKey(d));
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return [{text:'',done:false},{text:'',done:false},{text:'',done:false},
+          {text:'',done:false},{text:'',done:false},{text:'',done:false},{text:'',done:false}];
+}
+function saveQuarterlyGoals(d, goals) {
+  try { localStorage.setItem(quarterKey(d), JSON.stringify(goals)); } catch(e) {}
+}
+
 function getGreeting() {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -1082,6 +1159,10 @@ function renderHeader() {
     (ws.getMonth() !== we.getMonth() ? MONTHS_SHORT[we.getMonth()] + ' ' : '') + we.getDate();
   document.getElementById('week-panel-title').textContent = "Week of " + weekLabel;
   document.getElementById('week-panel-sub').textContent = 'Top 5 priorities this week';
+
+  // Quarterly panel title
+  document.getElementById('quarter-panel-title').textContent = getQuarterLabel(currentDate) + ' priorities';
+  document.getElementById('quarter-panel-sub').textContent = getQuarterMonths(currentDate) + ' · 7 goals';
 }
 
 function renderWeekStrip() {
@@ -1289,6 +1370,77 @@ function renderMonthlyBadge(goals) {
   document.getElementById('monthly-prog').style.width = (filled > 0 ? (done / filled * 100) : 0) + '%';
 }
 
+function renderQuarterlyGoals() {
+  var goals = getQuarterlyGoals(currentQuarterDate);
+  var container = document.getElementById('quarterly-goals');
+  container.innerHTML = '';
+
+  // Update panel title & sub
+  var qLabel = getQuarterLabel(currentQuarterDate);
+  var qMonths = getQuarterMonths(currentQuarterDate);
+  var isCurrentQ = quarterKey(currentQuarterDate) === quarterKey(TODAY);
+  document.getElementById('quarter-panel-title').textContent = qLabel + ' priorities';
+  document.getElementById('quarter-panel-sub').textContent = qMonths + (isCurrentQ ? ' · current quarter' : '');
+
+  goals.forEach(function(goal, i) {
+    var row = document.createElement('div');
+    row.className = 'goal-row';
+
+    var checkBtn = document.createElement('button');
+    checkBtn.className = 'goal-check' + (goal.done ? ' checked' : '');
+    checkBtn.onclick = function() {
+      var g = getQuarterlyGoals(currentQuarterDate);
+      if (g[i].text) {
+        g[i].done = !g[i].done;
+        saveQuarterlyGoals(currentQuarterDate, g);
+        renderQuarterlyGoals();
+        renderStats();
+      }
+    };
+
+    var dot = document.createElement('div');
+    dot.className = 'priority-dot ' + PRIORITY_COLORS[i];
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'goal-input' + (goal.done ? ' done' : '');
+    input.value = goal.text;
+    input.placeholder = getQuarterLabel(currentQuarterDate) + ' goal ' + (i + 1) + '...';
+    input.oninput = function() {
+      var g = getQuarterlyGoals(currentQuarterDate);
+      g[i].text = this.value;
+      if (!this.value) g[i].done = false;
+      saveQuarterlyGoals(currentQuarterDate, g);
+      renderQuarterlyBadge(g);
+    };
+    input.onblur = function() { renderQuarterlyGoals(); };
+
+    row.appendChild(checkBtn);
+    row.appendChild(dot);
+    row.appendChild(input);
+    container.appendChild(row);
+  });
+
+  renderQuarterlyBadge(goals);
+}
+
+function renderQuarterlyBadge(goals) {
+  var done = goals.filter(function(g) { return g.done && g.text; }).length;
+  var filled = goals.filter(function(g) { return g.text; }).length;
+  var badge = document.getElementById('quarterly-badge');
+  badge.textContent = done + ' / ' + (filled || 7);
+  badge.className = 'count-badge' + (done > 0 && done === filled ? ' all-done' : '');
+  document.getElementById('quarterly-prog').style.width = (filled > 0 ? (done / filled * 100) : 0) + '%';
+}
+
+function changeQuarter(dir) {
+  // Move currentQuarterDate by 3 months (one quarter)
+  var d = new Date(currentQuarterDate);
+  d.setMonth(d.getMonth() + dir * 3);
+  currentQuarterDate = d;
+  renderQuarterlyGoals();
+}
+
 function renderCalendar() {
   const grid = document.getElementById('cal-grid');
   grid.innerHTML = '';
@@ -1332,7 +1484,7 @@ let activeTab = 'daily';
 
 function switchTab(tab) {
   activeTab = tab;
-  ['daily','weekly','monthly'].forEach(function(t) {
+  ['daily','weekly','monthly','quarterly'].forEach(function(t) {
     document.getElementById('stats-' + t).style.display = t === tab ? 'block' : 'none';
     document.getElementById('tab-' + t).className = 'stats-tab' + (t === tab ? ' active' : '');
   });
@@ -1479,6 +1631,61 @@ function renderStats() {
 
   document.getElementById('stats-sub').textContent =
     'Tracking since May 1 — ' + totalDays + ' days, ' + weekResults.length + ' weeks, ' + monthResults.length + ' month' + (monthResults.length !== 1 ? 's' : '');
+
+  // ── QUARTERLY ──
+  var quarterResults = [];
+  var seenQuarters = {};
+  var qCursor = new Date(2026, 4, 1);
+  while (qCursor.getFullYear() < TODAY.getFullYear() ||
+        (qCursor.getFullYear() === TODAY.getFullYear() && qCursor.getMonth() <= TODAY.getMonth())) {
+    var qk = quarterKey(qCursor);
+    if (!seenQuarters[qk]) {
+      seenQuarters[qk] = true;
+      var qGoals = getQuarterlyGoals(qCursor);
+      var qFilled = qGoals.filter(function(g) { return g.text; }).length;
+      var qDone = qGoals.filter(function(g) { return g.done && g.text; }).length;
+      var qPerfect = qFilled > 0 && qDone === qFilled;
+      var qPartial = qFilled > 0 && !qPerfect;
+      var isCurrentQ = quarterKey(qCursor) === quarterKey(TODAY);
+      quarterResults.push({
+        date: new Date(qCursor),
+        label: getQuarterLabel(qCursor),
+        isPerfect: qPerfect,
+        isPartial: qPartial,
+        done: qDone,
+        filled: qFilled,
+        isCurrent: isCurrentQ
+      });
+    }
+    qCursor.setMonth(qCursor.getMonth() + 3);
+  }
+
+  var perfectQuarters = 0, totalQDone = 0, totalQFilled = 0;
+  quarterResults.forEach(function(q) {
+    if (q.isPerfect) perfectQuarters++;
+    totalQDone += q.done;
+    totalQFilled += q.filled;
+  });
+  var quarterRate = totalQFilled > 0 ? Math.round((totalQDone / totalQFilled) * 100) : 0;
+
+  document.getElementById('stat-perfect-quarters').textContent = perfectQuarters;
+  document.getElementById('stat-quarter-goals-done').textContent = totalQDone;
+  document.getElementById('stat-quarter-goals-total').textContent = totalQFilled;
+  document.getElementById('stat-quarter-rate').textContent = quarterRate + '%';
+
+  var qBar = document.getElementById('quarter-streak-bar');
+  qBar.innerHTML = '';
+  quarterResults.forEach(function(q) {
+    var dot = document.createElement('div');
+    var cls = 'streak-dot';
+    if (q.isPerfect) cls += ' complete';
+    else if (q.isPartial) cls += ' partial';
+    if (q.isCurrent) cls += ' today-dot';
+    dot.className = cls;
+    dot.title = q.label + ' — ' + q.done + '/' + q.filled + ' goals';
+    dot.onclick = (function(date) { return function() { currentDate = new Date(date); render(); }; })(q.date);
+    qBar.appendChild(dot);
+  });
 }
 
 // ── MONTH REVIEW ──
@@ -1693,6 +1900,40 @@ function renderReviewModal() {
     });
     content.appendChild(goalsList);
   }
+
+  // Quarterly goals recap
+  var reviewDate = new Date(y, m, 1);
+  var qGoals = getQuarterlyGoals(reviewDate);
+  var qFilled = qGoals.filter(function(g) { return g.text; }).length;
+  if (qFilled > 0) {
+    var qTitle = document.createElement('div');
+    qTitle.className = 'review-section-title';
+    qTitle.style.marginTop = '1.5rem';
+    qTitle.textContent = getQuarterLabel(reviewDate) + ' goals recap';
+    content.appendChild(qTitle);
+
+    var qSub = document.createElement('div');
+    qSub.style.cssText = 'font-size:11px;color:var(--text3);margin-bottom:10px;';
+    qSub.textContent = getQuarterMonths(reviewDate) + ' · shared across all months in this quarter';
+    content.appendChild(qSub);
+
+    var qList = document.createElement('div');
+    qGoals.forEach(function(g) {
+      if (!g.text) return;
+      var row = document.createElement('div');
+      row.className = 'review-goal-row';
+      var status = document.createElement('div');
+      status.className = 'review-goal-status ' + (g.done ? 'rg-done' : 'rg-miss');
+      status.textContent = g.done ? '✓' : '○';
+      var text = document.createElement('div');
+      text.className = 'review-goal-text' + (g.done ? '' : ' missed');
+      text.textContent = g.text;
+      row.appendChild(status);
+      row.appendChild(text);
+      qList.appendChild(row);
+    });
+    content.appendChild(qList);
+  }
 }
 
 function render() {
@@ -1701,6 +1942,7 @@ function render() {
   renderDailyTasks();
   renderWeeklyTasks();
   renderMonthlyGoals();
+  renderQuarterlyGoals();
   renderCalendar();
   renderStats();
 }
