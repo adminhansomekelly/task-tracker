@@ -201,16 +201,16 @@
   /* ── MAIN GRID ── */
   .main-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     align-items: start;
   }
 
-  @media (max-width: 1024px) {
+  @media (max-width: 860px) {
     .main-grid { grid-template-columns: 1fr 1fr; }
   }
 
-  @media (max-width: 620px) {
+  @media (max-width: 560px) {
     .main-grid { grid-template-columns: 1fr; }
   }
 
@@ -852,25 +852,25 @@
       <div class="goal-list" id="monthly-goals"></div>
     </div>
 
-    <!-- Quarterly Panel -->
-    <div class="panel">
-      <div class="panel-head">
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
-            <button class="nav-btn" onclick="changeQuarter(-1)" title="Previous quarter" style="width:22px;height:22px;font-size:12px;">‹</button>
-            <div class="panel-title" id="quarter-panel-title">Q2 priorities</div>
-            <button class="nav-btn" onclick="changeQuarter(1)" title="Next quarter" style="width:22px;height:22px;font-size:12px;">›</button>
-          </div>
-          <div class="panel-sub" id="quarter-panel-sub">Top goals this quarter</div>
-        </div>
-        <span class="count-badge" id="quarterly-badge">0 / 7</span>
-      </div>
-      <div class="prog-wrap">
-        <div class="prog-bar" id="quarterly-prog" style="width:0%"></div>
-      </div>
-      <div class="goal-list" id="quarterly-goals"></div>
-    </div>
+  </div>
 
+  <!-- Quarterly Panel (full-width row) -->
+  <div class="panel" style="margin-top:1rem;">
+    <div class="panel-head">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <button class="nav-btn" onclick="changeQuarter(-1)" title="Previous quarter" style="width:22px;height:22px;font-size:12px;">‹</button>
+          <div class="panel-title" id="quarter-panel-title">Q4 2026 priorities</div>
+          <button class="nav-btn" onclick="changeQuarter(1)" title="Next quarter" style="width:22px;height:22px;font-size:12px;">›</button>
+        </div>
+        <div class="panel-sub" id="quarter-panel-sub">Oct – Dec · current quarter</div>
+      </div>
+      <span class="count-badge" id="quarterly-badge">0 / 7</span>
+    </div>
+    <div class="prog-wrap">
+      <div class="prog-bar" id="quarterly-prog" style="width:0%"></div>
+    </div>
+    <div class="goal-list" id="quarterly-goals" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0;"></div>
   </div>
 
   <!-- Month Mini-Calendar -->
@@ -2033,10 +2033,4 @@ if (isIOS && !isStandalone && !dismissed) {
     '<button onclick="this.parentElement.remove();localStorage.setItem(\'install-banner-dismissed\',\'1\')" ',
       'style="background:rgba(255,255,255,0.2);border:none;color:white;font-size:18px;',
       'width:30px;height:30px;border-radius:50%;cursor:pointer;flex-shrink:0;',
-      'display:flex;align-items:center;justify-content:center;">&#x2715;</button>'
-  ].join('');
-  document.body.appendChild(banner);
-}
-</script>
-</body>
-</html>
+      'display:flex;align-items:center;justify-content:center
