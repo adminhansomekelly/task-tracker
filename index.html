@@ -1197,15 +1197,12 @@ document.getElementById('auth-submit').onclick = async function() {
     if (error) { msg.className='auth-msg err'; msg.textContent=error.message; btn.disabled=false; return; }
     onSignedIn(data.user);
   } else {
-    const { data, error } = await sb.auth.signUp({ email, password: pass });
+    const { data, error } = await sb.auth.signUp({ email, password: pass, options: { emailRedirectTo: 'https://adminhansomekelly.github.io/task-tracker/' } });
     if (error) { msg.className='auth-msg err'; msg.textContent=error.message; btn.disabled=false; return; }
     if (data.user && !data.user.identities?.length) {
       msg.className='auth-msg err'; msg.textContent='Email already registered. Try signing in.'; btn.disabled=false; return;
     }
-    msg.className='auth-msg ok'; msg.textContent='Account created! Signing you in…';
-    const { data: d2, error: e2 } = await sb.auth.signInWithPassword({ email, password: pass });
-    if (e2) { msg.className='auth-msg err'; msg.textContent=e2.message; btn.disabled=false; return; }
-    onSignedIn(d2.user);
+    msg.className='auth-msg ok'; msg.textContent='Check your email and click the confirmation link to finish signing up.'; btn.disabled=false; return;
   }
 };
 
@@ -1244,10 +1241,21 @@ async function signOut() {
   document.getElementById('auth-msg').textContent = '';
 }
 
-// Check if already logged in on load
+// Check if already logged in on load, or handle email confirmation redirect
 sb.auth.getSession().then(({ data }) => {
   if (data.session?.user) {
     onSignedIn(data.session.user);
+  }
+});
+
+// Handle email confirmation redirect (Supabase puts token in URL hash)
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session?.user && !currentUser) {
+    onSignedIn(session.user);
+    // Clean up the URL hash so it doesn't look messy
+    if (window.location.hash) {
+      history.replaceState(null, '', window.location.pathname);
+    }
   }
 });
 
