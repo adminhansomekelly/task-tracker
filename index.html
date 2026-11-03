@@ -1325,20 +1325,18 @@ function monthKey(d) {
   return `tk-m-${d.getFullYear()}-${d.getMonth()}`;
 }
 function weekKey(d) {
-  // Key based on the Monday of the week containing d
+  // Key based on the Sunday of the week containing d
   const day = new Date(d);
-  const dow = day.getDay();
-  const monday = new Date(day);
-  monday.setDate(day.getDate() - (dow === 0 ? 6 : dow - 1));
-  return `tk-w-${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
+  const sunday = new Date(day);
+  sunday.setDate(day.getDate() - day.getDay());
+  return `tk-w-${sunday.getFullYear()}-${sunday.getMonth()}-${sunday.getDate()}`;
 }
 function getWeekStart(d) {
   const day = new Date(d);
-  const dow = day.getDay();
-  const monday = new Date(day);
-  monday.setDate(day.getDate() - (dow === 0 ? 6 : dow - 1));
-  monday.setHours(0,0,0,0);
-  return monday;
+  const sunday = new Date(day);
+  sunday.setDate(day.getDate() - day.getDay());
+  sunday.setHours(0,0,0,0);
+  return sunday;
 }
 function getWeekEnd(d) {
   const start = getWeekStart(d);
@@ -1817,9 +1815,9 @@ function renderStats() {
   // ── WEEKLY ──
   var weekResults = [];
   var wStart = new Date(START);
-  // go to monday of START week
+  // go to sunday of START week
   var wDow = wStart.getDay();
-  wStart.setDate(wStart.getDate() - (wDow === 0 ? 6 : wDow - 1));
+  wStart.setDate(wStart.getDate() - wDow);
   wStart.setHours(0,0,0,0);
 
   while (wStart <= TODAY) {
@@ -2110,7 +2108,7 @@ function renderReviewModal() {
   // Find all weeks that overlap this month
   var wCursor = new Date(y, m, 1);
   var wDow = wCursor.getDay();
-  wCursor.setDate(wCursor.getDate() - (wDow === 0 ? 6 : wDow - 1));
+  wCursor.setDate(wCursor.getDate() - wDow); // back to Sunday
   wCursor.setHours(0,0,0,0);
   var weekNum = 1;
   while (wCursor.getMonth() <= m || wCursor.getFullYear() < y) {
